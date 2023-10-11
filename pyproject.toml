@@ -4,6 +4,8 @@ version = "0.1.0"
 description = "A mitmproxy addon that reads TLS parameters from Teleport bastion"
 authors = ["Tzu-Ting <tzingshih@gmail.com>"]
 license = "MIT"
+readme = "Readme.md"
+repository = "https://github.com/tzing/mitmproxy-teleport"
 
 [tool.poetry.dependencies]
 python = "^3.10"
