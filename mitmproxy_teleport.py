@@ -56,8 +56,12 @@ logger = logging.getLogger(__name__)
 
 class TeleportTlsConfig:
     """
-    A addon that reads TLS configurations from Teleport bastion and intergrate
-    them into mitmproxy.
+    The basic object that reads TLS configurations from Teleport bastion and
+    intergrate them into mitmproxy.
+
+    It compares the target host to the URI read from Teleport. If there is a match,
+    the client credentials are used to connect. Connections other than this will
+    not be modified or logged.
     """
 
     def __init__(
@@ -82,16 +86,17 @@ class TeleportTlsConfig:
         """
         logger.info("Read TLS config for %s from Teleport", app)
 
+        self.app = app
+
         tls_config = load_tsh_tls_config(
             proxy=proxy, cluster=cluster, user=user, app=app
         )
-
         self.hostname, self.port = extract_server_address(tls_config["uri"])
-        logger.info("Use Teleport cert for %s:%s", self.hostname, self.port)
-
         self.cert = create_combined_client_cert(
             path_cert=tls_config["cert"], path_key=tls_config["key"]
         )
+
+        logger.info("Loaded cert for %s:%s", self.hostname, self.port)
 
     def tls_start_server(self, tls_data: TlsData):
         # https://github.com/mitmproxy/mitmproxy/blob/10.1.1/mitmproxy/addons/tlsconfig.py#L230-L330
@@ -108,6 +113,8 @@ class TeleportTlsConfig:
         match_server &= self.port is None or self.port == server_port
         if not match_server:
             return
+
+        logger.info("Apply cert on %s (%s)", self.hostname, self.app)
 
         # supply extra information
         if server.sni is None:
@@ -175,9 +182,8 @@ def get_tsh_app_config(app: str) -> dict[str, str]:
 
 def is_certificate_valid(filepath: str) -> bool:
     with open(filepath, "rb") as fd:
-        data = fd.read()
+        cert = cryptography.x509.load_pem_x509_certificate(fd.read())
 
-    cert = cryptography.x509.load_pem_x509_certificate(data)
     now = datetime.datetime.utcnow()
     if now > cert.not_valid_after:
         logger.debug(
@@ -196,7 +202,6 @@ def login_tsh_app(proxy: str, cluster: str, user: str, app: str) -> None:
         cmd.append(f"--cluster={cluster}")
     if user:
         cmd.append(f"--user={user}")
-
     subprocess.run(cmd, check=True)
 
 
