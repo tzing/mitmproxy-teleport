@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "mitmproxy-teleport"
+version = "0.1.0"
+description = "A mitmproxy addon that reads TLS parameters from Teleport bastion"
+authors = ["Tzu-Ting <tzingshih@gmail.com>"]
+license = "MIT"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+mitmproxy = "^10.1.1"
+cryptography = "^41.0.4"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
